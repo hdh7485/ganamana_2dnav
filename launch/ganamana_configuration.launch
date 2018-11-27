@@ -8,6 +8,9 @@
     <param name="angle_compensate" type="bool" value="true"/>
   </node>
 
+  <node pkg="marvelmind_nav" type="hedge_rcv_bin" name="hedge_rcv_bin"/>
+  <node pkg="marvelmind_nav" type="subscriber_test" name="subscriber_test"/>
+
   <node pkg="tf" type="static_transform_publisher" name="lidar" args="0.20 0 0.15 3.14159 0 0 base_link laser 100" />
   <node pkg="tf" type="static_transform_publisher" name="imu" args="0.22 0 0.08 0 0 0 1 base_link imu_link 100" />
 

@@ -10,7 +10,7 @@ project(ganamana_2dnav)
 find_package(catkin REQUIRED COMPONENTS
   marvelmind_nav
   move_base
-  myahrs_driver
+#  myahrs_driver
   rplidar_ros
 )
 
@@ -104,10 +104,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES ganamana_2dnav
-#  CATKIN_DEPENDS marvelmind_nav move_base myahrs_driver rplidar_ros
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES ganamana_2dnav
+  CATKIN_DEPENDS marvelmind_nav move_base myahrs_driver rplidar_ros
+  DEPENDS system_lib
 )
 
 ###########
@@ -117,7 +117,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -140,16 +140,16 @@ add_executable(kanayama_node src/kanayama.cpp)
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
 ## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-set_target_properties(kanayama_node PROPERTIES OUTPUT_NAME node PREFIX "")
+#set_target_properties(kanayama_node PROPERTIES OUTPUT_NAME node PREFIX "")
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 add_dependencies(kanayama_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(kanayama_node
+  ${catkin_LIBRARIES}
+)
 
 #############
 ## Install ##

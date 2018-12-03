@@ -7,6 +7,7 @@
 #include "nav_msgs/Path.h"
 
 #include "geometry_msgs/PoseStamped.h"
+#include "geometry_msgs/Twist.h"
 
 #include <iostream>
 #include <cmath>
@@ -17,7 +18,10 @@
 
 nav_msgs::Path = reference_path;
 
-float getRadian(double theta);
+float getRadian(double theta){
+  theta = theta*PI / 180;
+  return theta;
+}
 
 void pathCallback(const nav_msgs::Path::ConstPtr& path_data){
   reference_path = *path_data;
@@ -66,7 +70,3 @@ int main(int argc, char **argv){
   return 0;
 }
 
-float getRadian(double theta){
-	theta = theta*PI / 180;
-	return theta;
-}

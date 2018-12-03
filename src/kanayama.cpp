@@ -47,6 +47,7 @@ private:
 
   nav_msgs::Path reference_path;
   int path_index;
+  int first_check;
 
   Point pre_point;
   Point current_point;
@@ -62,10 +63,11 @@ private:
 
 public:
   Kanayama():nh() {
-    int path_index = 0;
-    float K_v = 1;
-    float K_theta = 1;
-    float K_steer = 1;
+    path_index = 0;
+    K_v = 1;
+    K_theta = 1;
+    K_steer = 15;
+    first_check = 0;
 
     v = nh.advertise<std_msgs::Float64>("V", 100);
     angle = nh.advertise<std_msgs::Float64>("angle", 100);
@@ -82,16 +84,24 @@ public:
 
   void pathCallback(const nav_msgs::Path::ConstPtr& path_data) {
     reference_path = *path_data;
-    std::cout << reference_path << std::endl;
+    if (first_check == 0){
+      target_point = Point(reference_path.poses[0].pose.position.x, reference_path.poses[0].pose.position.y);
+      first_check = 1;
+    }
+    //std::cout << reference_path << std::endl;
   }
   
   void gpsCallback(const marvelmind_nav::hedge_pos_ang::ConstPtr& gps_data) {
+    //ROS_INFO("%f %f", gps_data->x_m, gps_data->y_m);
     Point current_point(gps_data->x_m, gps_data->y_m);
+      
   
-    while (Point::getEuclideDistance(current_point, target_point) < 0.1) {
+    while (Point::getEuclideDistance(current_point, target_point) < 0.2) {
       path_index += 1;
       target_point = Point(reference_path.poses[path_index].pose.position.x, reference_path.poses[path_index].pose.position.y);
     }
+    ROS_INFO("%d", path_index);
+    ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
   
     float current_heading = atan2(current_point.x - pre_point.x, current_point.y - pre_point.y);
   
@@ -100,7 +110,8 @@ public:
   
     //V = vr*cos(thetae) + Kx*xe;
     //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
-    float velocity = K_v / y_error;
+    //float velocity = K_v / y_error;
+    float velocity = 0.3;
     float steer = K_steer * y_error;
   
     if(steer > 30) steer = 30;

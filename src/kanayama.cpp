@@ -8,6 +8,7 @@
 
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Twist.h"
+#include <visualization_msgs/Marker.h>
 
 #include "marvelmind_nav/hedge_pos_ang.h"
 
@@ -42,12 +43,16 @@ private:
   ros::Publisher v;
   ros::Publisher angle;
   ros::Publisher twist_pub;
+  ros::Publisher marker_pub;
   ros::Subscriber gps_sub;
   ros::Subscriber path_sub;
 
   nav_msgs::Path reference_path;
   int path_index;
   int first_check;
+
+  float current_heading;
+  float pre_heading;
 
   Point pre_point;
   Point current_point;
@@ -61,6 +66,8 @@ private:
   std_msgs::Float64 msgs;
   geometry_msgs::Twist twist_msg;
 
+  visualization_msgs::Marker marker;
+
 public:
   Kanayama():nh() {
     path_index = 0;
@@ -72,9 +79,10 @@ public:
     v = nh.advertise<std_msgs::Float64>("V", 100);
     angle = nh.advertise<std_msgs::Float64>("angle", 100);
     twist_pub = nh.advertise<geometry_msgs::Twist>("twist_msg", 100);
+    marker_pub = nh.advertise<visualization_msgs::Marker>("modem_position", 10);
 
     gps_sub = nh.subscribe("/hedge_pos_ang", 1000, &Kanayama::gpsCallback, this);
-    path_sub = nh.subscribe("/gps_path", 1000, &Kanayama::pathCallback, this);
+    path_sub = nh.subscribe("/LPF_path", 1000, &Kanayama::pathCallback, this);
   }
 
   float getRadian(double theta) {
@@ -90,24 +98,72 @@ public:
     }
     //std::cout << reference_path << std::endl;
   }
+
+  void drawMarker(std_msgs::Header header, Point point, int id=0){
+    marker.header = header;
+
+    // Set the namespace and id for this marker.  This serves to create a unique ID
+    // Any marker sent with the same namespace and id will overwrite the old one
+    marker.ns = "basic_shapes";
+    marker.id = id;
+
+    // Set the marker type
+    marker.type = visualization_msgs::Marker::CUBE;
+
+    // Set the marker action.  Options are ADD, DELETE, and new in ROS Indigo: 3 (DELETEALL)
+    marker.action = visualization_msgs::Marker::ADD;
+
+    // Set the pose of the marker.  This is a full 6DOF pose relative to the frame/time specified in the header
+    marker.pose.position.x = point.x;
+    marker.pose.position.y = point.y;
+    marker.pose.position.z = 0;
+	marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+
+    // Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker.scale.x = 0.15; 
+    marker.scale.y = 0.15;
+    marker.scale.z = 0.06;
+    marker.color.r = 0.0f;
+    marker.color.g = 0.0f;
+    marker.color.b = 1.0f;
+    marker.color.a = 1.0;
+
+    marker.lifetime = ros::Duration(5);
+     
+    marker_pub.publish(marker);
+  }
   
   void gpsCallback(const marvelmind_nav::hedge_pos_ang::ConstPtr& gps_data) {
     //ROS_INFO("%f %f", gps_data->x_m, gps_data->y_m);
     Point current_point(gps_data->x_m, gps_data->y_m);
-      
+    std_msgs::Header car_header;
+    car_header.frame_id = "/gps_path";
+    car_header.stamp = ros::Time::now();
+    drawMarker(car_header, current_point);
   
-    while (Point::getEuclideDistance(current_point, target_point) < 0.2) {
+    while (Point::getEuclideDistance(current_point, target_point) < 0.25) {
       path_index += 1;
       target_point = Point(reference_path.poses[path_index].pose.position.x, reference_path.poses[path_index].pose.position.y);
     }
-    ROS_INFO("%d", path_index);
-    ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
+    drawMarker(car_header, target_point, 1);
   
-    float current_heading = atan2(current_point.x - pre_point.x, current_point.y - pre_point.y);
+    if (Point::getEuclideDistance(current_point, pre_point) > 0.05)
+      //current_heading = atan2(current_point.x - pre_point.x, current_point.y - pre_point.y);
+      current_heading = atan2(current_point.y - pre_point.y, current_point.x - pre_point.x);
+    else
+      current_heading = pre_heading;
   
     float x_error = cos(current_heading)*(target_point.x - current_point.x) + sin(current_heading)*(target_point.y - current_point.y);
     float y_error = -sin(current_heading)*(target_point.x - current_point.x) + cos(current_heading)*(target_point.y - current_point.y);
   
+    ROS_INFO("path_index:%d", path_index);
+    ROS_INFO("current_heading:%f, pre_heading:%f", current_heading/M_PI*180, pre_heading);
+    ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
+    ROS_INFO("xerror:%f, yerror:%f", x_error, y_error);
+
     //V = vr*cos(thetae) + Kx*xe;
     //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
     //float velocity = K_v / y_error;
@@ -124,12 +180,14 @@ public:
   
     twist_msg.linear.x = velocity;
     twist_msg.angular.z = steer;
-    
+
+    // Set our initial shape type to be a cube
     v.publish(msg);
     angle.publish(msgs);
     twist_pub.publish(twist_msg);
   
     pre_point = current_point;
+    pre_heading = current_heading;
   }
 };
 

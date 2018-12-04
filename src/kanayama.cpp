@@ -26,6 +26,21 @@ public:
   Point(){}
   Point(float _x, float _y): x(_x), y(_y){}
 
+  Point& operator + (const Point &point){
+    Point temp(x+point.x, y+point.y);
+    return temp;
+  }
+
+  Point& operator - (const Point &point){
+    Point temp(x-point.x, y-point.y);
+    return temp;
+  }
+
+  Point& operator / (const float &num){
+    Point temp(x/num, y/num);
+    return temp;
+  }
+
   Point& operator = (const Point &point){
     x = point.x;
     y = point.y;
@@ -34,6 +49,55 @@ public:
 
   static float getEuclideDistance(Point p1, Point p2){
     return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+  }
+};
+
+class Filter{
+private:
+  float x;
+  float pre_x;
+  float y;
+  float pre_y;
+  Point current_point;
+  Point before_point;
+  Point before2_point;
+
+public:
+  Filter(): x(0), pre_x(0), y(0), pre_y(0){
+  }
+
+  Filter(float x_, float pre_x_, float y_, float pre_y_): x(x_), pre_x(pre_x_), y(y_), pre_y(pre_y_){
+  }
+
+  void set_data(float x_, float pre_x_, float y_, float pre_y_, Point point_){
+    x = x_;
+    pre_x = pre_x_;
+    y = y_;
+    pre_y = pre_y_;
+    before2_point = before_point;
+    before_point = current_point;
+    current_point = point_;
+  }
+
+  float LPFilter(float x_, float tau_, float ts_){
+    y = (tau_ * pre_y + ts_ * x_ )/(tau_ + ts_); 
+    pre_x = x_;
+    pre_y = y;
+    return y;
+  }
+
+  Point distanceFilter(Point _current_point, float distance){
+    if (Point::getEuclideDistance(_current_point, before_point) > distance){
+      ROS_INFO("%f, %f", _current_point.x, _current_point.y);
+      ROS_INFO("%f, %f", before_point.x, before_point.y);
+      Point result_point = Point(before_point.x + (before_point.x - before2_point.x)/1.1, before_point.y + (before_point.y - before2_point.y)/1.1);
+      before2_point = before_point;
+      before_point = result_point;;
+      return result_point;
+    }
+    before2_point = before_point;
+    before_point = _current_point;
+    return _current_point;
   }
 };
 
@@ -49,7 +113,9 @@ private:
 
   nav_msgs::Path reference_path;
   int path_index;
-  int first_check;
+
+  int path_first_check;
+  int gps_first_check;
 
   float current_heading;
   float pre_heading;
@@ -68,13 +134,18 @@ private:
 
   visualization_msgs::Marker marker;
 
+  Filter x_low_pass_filter;
+  Filter y_low_pass_filter;
+  Filter point_filter;
+
 public:
   Kanayama():nh() {
     path_index = 0;
     K_v = 1;
     K_theta = 1;
-    K_steer = 15;
-    first_check = 0;
+    K_steer = 200;
+    path_first_check = 0;
+    gps_first_check = 0;
 
     v = nh.advertise<std_msgs::Float64>("V", 100);
     angle = nh.advertise<std_msgs::Float64>("angle", 100);
@@ -92,9 +163,9 @@ public:
 
   void pathCallback(const nav_msgs::Path::ConstPtr& path_data) {
     reference_path = *path_data;
-    if (first_check == 0){
+    if (path_first_check == 0){
+      path_first_check = 1;
       target_point = Point(reference_path.poses[0].pose.position.x, reference_path.poses[0].pose.position.y);
-      first_check = 1;
     }
     //std::cout << reference_path << std::endl;
   }
@@ -137,8 +208,21 @@ public:
   }
   
   void gpsCallback(const marvelmind_nav::hedge_pos_ang::ConstPtr& gps_data) {
-    //ROS_INFO("%f %f", gps_data->x_m, gps_data->y_m);
-    Point current_point(gps_data->x_m, gps_data->y_m);
+    Point raw_point(gps_data->x_m, gps_data->y_m);
+    point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, raw_point);
+    if (gps_first_check < 3) {
+      gps_first_check++;
+      current_point = Point(gps_data->x_m, gps_data->y_m);
+      x_low_pass_filter.set_data(gps_data->x_m, gps_data->x_m, gps_data->x_m, gps_data->x_m, current_point);
+      y_low_pass_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
+      point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
+    }
+    else {
+      Point raw_point2 = point_filter.distanceFilter(raw_point, 0.4);
+      float current_x = x_low_pass_filter.LPFilter(raw_point2.x, 5.0, 1.0);
+      float current_y = y_low_pass_filter.LPFilter(raw_point2.y, 5.0, 1.0);
+      current_point = Point(current_x, current_y);
+    }
     std_msgs::Header car_header;
     car_header.frame_id = "/gps_path";
     car_header.stamp = ros::Time::now();
@@ -151,7 +235,6 @@ public:
     drawMarker(car_header, target_point, 1);
   
     if (Point::getEuclideDistance(current_point, pre_point) > 0.05)
-      //current_heading = atan2(current_point.x - pre_point.x, current_point.y - pre_point.y);
       current_heading = atan2(current_point.y - pre_point.y, current_point.x - pre_point.x);
     else
       current_heading = pre_heading;
@@ -180,6 +263,7 @@ public:
   
     twist_msg.linear.x = velocity;
     twist_msg.angular.z = steer;
+    ROS_INFO("steer:%f, speed:%f", steer, velocity);
 
     // Set our initial shape type to be a cube
     v.publish(msg);
@@ -198,52 +282,5 @@ int main(int argc, char **argv){
   ros::spin();
 
   return 0;
-/*
-  ros::Rate loop_rate(10);
-
-  float xc, yc, thetac; //현재 차량좌표 변수지정필요 아마 0으로 시작하면 되지 않을까 합니다
-  float xr, yr, thetar; //목표 좌표 변수지정필요
-  float xe, ye, thetae; //오차 변수지정필요 아마 0으로 하면 되지 않을까 생각합니다.
-  float vc, vr, w, wr; //현재 속도와 각속도 ,목표 속도와 각속도(정해야한다)
-  float Kx = 1;//못정함
-  float Ky = 1;//못정함
-  float ktheta = 1;//못정함
-
-  float V=0;
-  float Angle=1;
-
-  std_msgs::Float64 msg;
-  std_msgs::Float64 msgs;
-  geometry_msgs::Twist twist_msg;
-
-  while (ros::ok()){
-    thetac = getRadian(thetac);
-    thetae = getRadian(thetae);
-    thetar = getRadian(thetar);
-	thetae = thetar - thetac;
-	xe = cos(thetac)*(xr - xc) + sin(thetac)*(yr - yc);
-	ye = -sin(thetac)*(xr - xc) + cos(thetac)*(yr - yc);
-    
-    //V = vr*cos(thetae);//보정된 속도
-    //w = vr*(Ky*ye + ktheta*sin(thetae));//보정된 각속도
-    V = vr*cos(thetae);
-    w = vr*(Ky*ye + ktheta*sin(thetae));
-	Angle = GR*atan(w*l / vc);
-
-    msg.data=V;
-    msgs.data=Angle;
-    twist_msg.linear.x = V;
-    twist_msg.angular.z = Angle;
-
-    v.publish(msg);
-    angle.publish(msgs);
-    twist_pub.publish(twist_msg);
-
-    loop_rate.sleep();
-    //V++;
-    ros::spinOnce();
-  }
-  return 0;
-*/
 }
 

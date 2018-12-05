@@ -143,7 +143,7 @@ public:
     path_index = 0;
     K_v = 1;
     K_theta = 1;
-    K_steer = 200;
+    K_steer = -40;
     path_first_check = 0;
     gps_first_check = 0;
 
@@ -228,7 +228,7 @@ public:
     car_header.stamp = ros::Time::now();
     drawMarker(car_header, current_point);
   
-    while (Point::getEuclideDistance(current_point, target_point) < 0.25) {
+    while (Point::getEuclideDistance(current_point, target_point) < 0.80) {
       path_index += 1;
       target_point = Point(reference_path.poses[path_index].pose.position.x, reference_path.poses[path_index].pose.position.y);
     }
@@ -250,7 +250,7 @@ public:
     //V = vr*cos(thetae) + Kx*xe;
     //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
     //float velocity = K_v / y_error;
-    float velocity = 0.3;
+    float velocity = 0.25;
     float steer = K_steer * y_error;
   
     if(steer > 30) steer = 30;

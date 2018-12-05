@@ -143,7 +143,7 @@ public:
     path_index = 0;
     K_v = 1;
     K_theta = 1;
-    K_steer = -40;
+    K_steer = 40;
     path_first_check = 0;
     gps_first_check = 0;
 

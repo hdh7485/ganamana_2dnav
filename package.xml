@@ -52,13 +52,16 @@
   <build_depend>marvelmind_nav</build_depend>
   <build_depend>move_base</build_depend>
   <build_depend>rplidar_ros</build_depend>
+  <build_depend>tf</build_depend>
   <build_export_depend>marvelmind_nav</build_export_depend>
   <build_export_depend>move_base</build_export_depend>
   <build_export_depend>rplidar_ros</build_export_depend>
+  <build_export_depend>tf</build_export_depend>
   <exec_depend>marvelmind_nav</exec_depend>
   <exec_depend>move_base</exec_depend>
   <exec_depend>myahrs_driver</exec_depend>
   <exec_depend>rplidar_ros</exec_depend>
+  <exec_depend>tf</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

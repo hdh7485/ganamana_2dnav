@@ -143,13 +143,13 @@ public:
     path_index = 0;
     K_v = 1;
     K_theta = 1;
-    K_steer = 40;
+    K_steer = -40;
     path_first_check = 0;
     gps_first_check = 0;
 
-    v = nh.advertise<std_msgs::Float64>("V", 100);
-    angle = nh.advertise<std_msgs::Float64>("angle", 100);
-    twist_pub = nh.advertise<geometry_msgs::Twist>("twist_msg", 100);
+    v = nh.advertise<std_msgs::Float64>("/V", 100);
+    angle = nh.advertise<std_msgs::Float64>("/angle", 100);
+    twist_pub = nh.advertise<geometry_msgs::Twist>("/twist_msg", 100);
     marker_pub = nh.advertise<visualization_msgs::Marker>("modem_position", 10);
 
     gps_sub = nh.subscribe("/hedge_pos_ang", 1000, &Kanayama::gpsCallback, this);

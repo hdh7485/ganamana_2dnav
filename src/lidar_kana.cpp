@@ -89,8 +89,8 @@ public:
 
   Point distanceFilter(Point _current_point, float distance){
     if (Point::getEuclideDistance(_current_point, before_point) > distance){
-      ROS_INFO("%f, %f", _current_point.x, _current_point.y);
-      ROS_INFO("%f, %f", before_point.x, before_point.y);
+      //ROS_INFO("%f, %f", _current_point.x, _current_point.y);
+      //ROS_INFO("%f, %f", before_point.x, before_point.y);
       Point result_point = Point(before_point.x + (before_point.x - before2_point.x)/1.1, before_point.y + (before_point.y - before2_point.y)/1.1);
       before2_point = before_point;
       before_point = result_point;;
@@ -151,7 +151,7 @@ public:
     twist_pub = nh.advertise<geometry_msgs::Twist>("twist_msg", 100);
     marker_pub = nh.advertise<visualization_msgs::Marker>("modem_position", 10);
 
-    path_sub = nh.subscribe("/LPF_path", 1000, &Kanayama_lidar::pathCallback, this);
+    path_sub = nh.subscribe("/raw_path", 1000, &Kanayama_lidar::pathCallback, this);
     lidarKanayama();
   }
 
@@ -208,12 +208,14 @@ public:
   
   void lidarKanayama(){
     tf::TransformListener listener;
+    //ROS_INFO("123123");
+    listener.waitForTransform("/map", "/base_link", ros::Time::now(), ros::Duration(1.0));
     while (nh.ok()){
+      ros::spinOnce();
       tf::StampedTransform transform;
 
       try{
-        listener.lookupTransform("/map", "/base_link",  
-            		  ros::Time::now(), transform);
+        listener.lookupTransform("/map", "/base_link", ros::Time(), transform);
       }
       catch (tf::TransformException ex){
               ROS_ERROR("%s",ex.what());
@@ -243,7 +245,7 @@ public:
     std_msgs::Header car_header;
     car_header.frame_id = "/map";
     car_header.stamp = ros::Time::now();
-    drawMarker(car_header, current_point);
+    //drawMarker(car_header, current_point);
   
     while (Point::getEuclideDistance(current_point, target_point) < 0.80) {
       path_index += 1;
@@ -259,9 +261,9 @@ public:
     float x_error = cos(current_heading)*(target_point.x - current_point.x) + sin(current_heading)*(target_point.y - current_point.y);
     float y_error = -sin(current_heading)*(target_point.x - current_point.x) + cos(current_heading)*(target_point.y - current_point.y);
   
-    ROS_INFO("path_index:%d", path_index);
-    ROS_INFO("current_heading:%f, pre_heading:%f", current_heading/M_PI*180, pre_heading);
-    ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
+    //ROS_INFO("path_index:%d", path_index);
+    //ROS_INFO("current_heading:%f, pre_heading:%f", current_heading/M_PI*180, pre_heading);
+    //ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
     ROS_INFO("xerror:%f, yerror:%f", x_error, y_error);
     //
     //V = vr*cos(thetae) + Kx*xe;
@@ -280,7 +282,8 @@ public:
   
     twist_msg.linear.x = velocity;
     twist_msg.angular.z = steer;
-    ROS_INFO("steer:%f, speed:%f", steer, velocity);
+    //ROS_INFO("steer:%f, speed:%f", steer, velocity);
+    ROS_INFO("steer:%f", steer);
 
     // Set our initial shape type to be a cube
     v.publish(msg);

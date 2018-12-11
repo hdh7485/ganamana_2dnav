@@ -49,14 +49,20 @@
   <!-- Use doc_depend for packages you need only for building documentation: -->
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>roscpp</build_depend>
   <build_depend>marvelmind_nav</build_depend>
   <build_depend>move_base</build_depend>
   <build_depend>rplidar_ros</build_depend>
   <build_depend>tf</build_depend>
+  <build_export_depend>rospy</build_export_depend>
+  <build_export_depend>roscpp</build_export_depend>
   <build_export_depend>marvelmind_nav</build_export_depend>
   <build_export_depend>move_base</build_export_depend>
   <build_export_depend>rplidar_ros</build_export_depend>
   <build_export_depend>tf</build_export_depend>
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>roscpp</exec_depend>
   <exec_depend>marvelmind_nav</exec_depend>
   <exec_depend>move_base</exec_depend>
   <exec_depend>myahrs_driver</exec_depend>

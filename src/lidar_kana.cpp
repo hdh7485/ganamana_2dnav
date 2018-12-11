@@ -208,8 +208,8 @@ public:
   
   void lidarKanayama(){
     tf::TransformListener listener;
-    //ROS_INFO("123123");
     listener.waitForTransform("/map", "/base_link", ros::Time::now(), ros::Duration(1.0));
+    float steer_test_value = 0.0f;
     while (nh.ok()){
       ros::spinOnce();
       tf::StampedTransform transform;
@@ -218,80 +218,80 @@ public:
         listener.lookupTransform("/map", "/base_link", ros::Time(), transform);
       }
       catch (tf::TransformException ex){
-              ROS_ERROR("%s",ex.what());
-              ros::Duration(1.0).sleep();
+        ROS_ERROR("%s",ex.what());
+        ros::Duration(1.0).sleep();
       }
 
-    Point raw_point(transform.getOrigin().x(), transform.getOrigin().y());
-    current_point = raw_point;
+      Point raw_point(transform.getOrigin().x(), transform.getOrigin().y());
+      current_point = raw_point;
 
-    //point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, raw_point);
+      //point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, raw_point);
 
-    /*
-    if (gps_first_check < 3) {
-      gps_first_check++;
-      current_point = Point(gps_data->x_m, gps_data->y_m);
-      x_low_pass_filter.set_data(gps_data->x_m, gps_data->x_m, gps_data->x_m, gps_data->x_m, current_point);
-      y_low_pass_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
-      point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
-    }
-    else {
-      Point raw_point2 = point_filter.distanceFilter(raw_point, 0.4);
-      float current_x = x_low_pass_filter.LPFilter(raw_point2.x, 5.0, 1.0);
-      float current_y = y_low_pass_filter.LPFilter(raw_point2.y, 5.0, 1.0);
-      current_point = Point(current_x, current_y);
-    }
-    */
-    std_msgs::Header car_header;
-    car_header.frame_id = "/map";
-    car_header.stamp = ros::Time::now();
-    //drawMarker(car_header, current_point);
+      /*
+      if (gps_first_check < 3) {
+        gps_first_check++;
+        current_point = Point(gps_data->x_m, gps_data->y_m);
+        x_low_pass_filter.set_data(gps_data->x_m, gps_data->x_m, gps_data->x_m, gps_data->x_m, current_point);
+        y_low_pass_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
+        point_filter.set_data(gps_data->y_m, gps_data->y_m, gps_data->y_m, gps_data->y_m, current_point);
+      }
+      else {
+        Point raw_point2 = point_filter.distanceFilter(raw_point, 0.4);
+        float current_x = x_low_pass_filter.LPFilter(raw_point2.x, 5.0, 1.0);
+        float current_y = y_low_pass_filter.LPFilter(raw_point2.y, 5.0, 1.0);
+        current_point = Point(current_x, current_y);
+      }
+      */
+      std_msgs::Header car_header;
+      car_header.frame_id = "/map";
+      car_header.stamp = ros::Time::now();
+      //drawMarker(car_header, current_point);
   
-    while (Point::getEuclideDistance(current_point, target_point) < 0.80) {
-      path_index += 1;
-      target_point = Point(reference_path.poses[path_index].pose.position.x, reference_path.poses[path_index].pose.position.y);
-    }
-    drawMarker(car_header, target_point, 1);
+      while (Point::getEuclideDistance(current_point, target_point) < 0.80) {
+        path_index += 1;
+        target_point = Point(reference_path.poses[path_index].pose.position.x, reference_path.poses[path_index].pose.position.y);
+      }
+      drawMarker(car_header, target_point, 1);
   
-    if (Point::getEuclideDistance(current_point, pre_point) > 0.05)
-      current_heading = atan2(current_point.y - pre_point.y, current_point.x - pre_point.x);
-    else
-      current_heading = pre_heading;
+      if (Point::getEuclideDistance(current_point, pre_point) > 0.05)
+        current_heading = atan2(current_point.y - pre_point.y, current_point.x - pre_point.x);
+      else
+        current_heading = pre_heading;
   
-    float x_error = cos(current_heading)*(target_point.x - current_point.x) + sin(current_heading)*(target_point.y - current_point.y);
-    float y_error = -sin(current_heading)*(target_point.x - current_point.x) + cos(current_heading)*(target_point.y - current_point.y);
+      float x_error = cos(current_heading)*(target_point.x - current_point.x) + sin(current_heading)*(target_point.y - current_point.y);
+      float y_error = -sin(current_heading)*(target_point.x - current_point.x) + cos(current_heading)*(target_point.y - current_point.y);
   
-    //ROS_INFO("path_index:%d", path_index);
-    //ROS_INFO("current_heading:%f, pre_heading:%f", current_heading/M_PI*180, pre_heading);
-    //ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
-    ROS_INFO("xerror:%f, yerror:%f", x_error, y_error);
-    //
-    //V = vr*cos(thetae) + Kx*xe;
-    //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
-    //float velocity = K_v / y_error;
-    float velocity = 0.25;
-    float steer = K_steer * y_error;
+      //ROS_INFO("path_index:%d", path_index);
+      //ROS_INFO("current_heading:%f, pre_heading:%f", current_heading/M_PI*180, pre_heading);
+      //ROS_INFO("target:%f, %f, current:%f, %f", target_point.x, target_point.y, current_point.x, current_point.y);
+      ROS_INFO("xerror:%f, yerror:%f", x_error, y_error);
+      //V = vr*cos(thetae) + Kx*xe;
+      //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
+      //float velocity = K_v / y_error;
+      float velocity = 0.25;
+      float steer = K_steer * y_error;
+      if(steer_test_value > 30) steer_test_value = -30;
+      steer = steer_test_value;
+      steer_test_value += 5;
   
-    if(steer > 30) steer = 30;
-    if(steer < -30) steer = -30;
+      if(steer > 30) steer = 30;
+      if(steer < -30) steer = -30;
   
-    //Angle = GR*atan(w*l / vc);
-    
-    msg.data = velocity;
-    msgs.data = steer;
+      //Angle = GR*atan(w*l / vc);
+      
+      msg.data = velocity;
+      msgs.data = steer;
   
-    twist_msg.linear.x = velocity;
-    twist_msg.angular.z = steer;
-    //ROS_INFO("steer:%f, speed:%f", steer, velocity);
-    ROS_INFO("steer:%f", steer);
+      twist_msg.linear.x = velocity;
+      twist_msg.angular.z = steer;
+      ROS_INFO("steer:%f", steer);
 
-    // Set our initial shape type to be a cube
-    v.publish(msg);
-    angle.publish(msgs);
-    twist_pub.publish(twist_msg);
+      v.publish(msg);
+      angle.publish(msgs);
+      twist_pub.publish(twist_msg);
   
-    pre_point = current_point;
-    pre_heading = current_heading;
+      pre_point = current_point;
+      pre_heading = current_heading;
     }
   }
 };

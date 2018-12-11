@@ -8,6 +8,8 @@ project(ganamana_2dnav)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  rospy
+  roscpp
   marvelmind_nav
   move_base
 #  myahrs_driver

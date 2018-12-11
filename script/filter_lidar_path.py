@@ -1,5 +1,4 @@
-#!/usr/local/bin/python
-
+#!/usr/bin/env python
 import rospy
 import copy
 import csv
@@ -74,7 +73,7 @@ def pointlist_2_path(point_list, header):
 
     return path
 
-with open('lidar_path.csv', 'rb') as f:
+with open('/home/odroid/catkin_ws/src/ganamana_2dnav/script/lidar_path.csv', 'rb') as f:
     reader = csv.reader(f)
     gps_data = list(reader)
     gps_data = [Point(float(x[0]), float(x[1])) for x in gps_data]

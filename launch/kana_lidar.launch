@@ -16,10 +16,12 @@
       <param name="baud" value="57600" />
   </node>
 
-  <!-- Path and kanayama algorithm -->
+  <!-- Hector SLAM -->
+  <include file="$(find hector_mapping)/launch/mapping_ganamana.launch" />
+
+  <!-- Path -->
   <node pkg="ganamana_2dnav" type="filter_lidar_path.py" name="filter_lidar_path"/>
-  <node pkg="ganamana_2dnav" type="kanayama_lidar_node" name="kanayama_lidar_node" output="screen">
-      <!--remap from="LPF_path" to="raw_path"/-->
-  </node>
+  <!--node pkg="ganamana_2dnav" type="kanayama_lidar_node" name="kanayama_lidar_node" output="screen">
+  </node-->
 
 </launch>

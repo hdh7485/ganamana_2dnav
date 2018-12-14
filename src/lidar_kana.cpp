@@ -210,6 +210,7 @@ public:
     tf::TransformListener listener;
     listener.waitForTransform("/map", "/base_link", ros::Time::now(), ros::Duration(1.0));
     float steer_test_value = 0.0f;
+    ros::Rate r(10);
     while (nh.ok()){
       ros::spinOnce();
       tf::StampedTransform transform;
@@ -269,10 +270,11 @@ public:
       //w = wr + vr*(Ky*ye + ktheta*sin(thetae));
       //float velocity = K_v / y_error;
       float velocity = 0.25;
-      float steer = K_steer * y_error;
-      if(steer_test_value > 30) steer_test_value = -30;
-      steer = steer_test_value;
-      steer_test_value += 5;
+      float steer;
+      steer = (int)(K_steer * y_error);
+      //if(steer_test_value > 30) steer_test_value = -30;
+      //steer = steer_test_value;
+      //steer_test_value += 1;
   
       if(steer > 30) steer = 30;
       if(steer < -30) steer = -30;
@@ -292,6 +294,7 @@ public:
   
       pre_point = current_point;
       pre_heading = current_heading;
+      r.sleep();
     }
   }
 };
